@@ -33,14 +33,34 @@ def _get_key():
     return key
 
 
-def _configured_model():
+def _configured_model(model_name=None):
     if genai is None:
         return None
     key = _get_key()
     if not key:
         return None
     genai.configure(api_key=key)
-    return genai.GenerativeModel(MODEL_NAME)
+    return genai.GenerativeModel(model_name or MODEL_NAME)
+
+
+def _generate_with_fallback(prompt):
+    """Try to generate content using primary model, fallback to 1.5-flash on failure."""
+    model = _configured_model()
+    if model is None:
+        return None
+    try:
+        resp = model.generate_content(prompt)
+        return resp.text.strip()
+    except Exception as e:
+        print(f"[AI Fallback] Primary model failed: {e}. Trying gemini-1.5-flash...")
+        try:
+            fallback_model = _configured_model("gemini-1.5-flash")
+            if fallback_model:
+                resp = fallback_model.generate_content(prompt)
+                return resp.text.strip()
+        except Exception as fe:
+            print(f"[AI Fallback] Fallback model failed: {fe}")
+    return None
 
 
 def _context_block(aqi_value, aqi_label, co, ozone, no2, pm25, city=None, forecast_summary=None):
@@ -62,12 +82,8 @@ def answer_question(question, aqi_value, aqi_label, co, ozone, no2, pm25,
     Free-form natural language Q&A grounded in the current dashboard state.
     Falls back to a rule-based answer if no API key is configured.
     """
-    model = _configured_model()
     context = _context_block(aqi_value, aqi_label, co, ozone, no2, pm25, city, forecast_summary)
     profile_line = f"\nThe user is: {user_profile}." if user_profile else ""
-
-    if model is None:
-        return _fallback_answer(aqi_value, aqi_label)
 
     prompt = f"""You are an air quality decision assistant. Be direct, concrete, and brief
 (3-5 sentences max). Base your answer only on the data given. If the question
@@ -77,11 +93,10 @@ requires a decision, give a clear recommendation, not just a description of the 
 
 Question: {question}
 """
-    try:
-        resp = model.generate_content(prompt)
-        return resp.text.strip()
-    except Exception as e:
-        return f"(AI unavailable, showing fallback answer — {e})\n\n" + _fallback_answer(aqi_value, aqi_label)
+    result = _generate_with_fallback(prompt)
+    if result:
+        return result
+    return _fallback_answer(aqi_value, aqi_label)
 
 
 def generate_advisory(aqi_value, aqi_label, co, ozone, no2, pm25,
@@ -89,11 +104,7 @@ def generate_advisory(aqi_value, aqi_label, co, ozone, no2, pm25,
     """
     Auto-generated short advisory card, e.g. for a homepage alert banner.
     """
-    model = _configured_model()
     context = _context_block(aqi_value, aqi_label, co, ozone, no2, pm25, city, forecast_summary)
-
-    if model is None:
-        return _fallback_answer(aqi_value, aqi_label)
 
     prompt = f"""You are an air quality decision assistant writing a short (2-3 sentence)
 advisory for {user_profile}. Be specific and actionable — mention a concrete action
@@ -101,11 +112,10 @@ advisory for {user_profile}. Be specific and actionable — mention a concrete a
 
 {context}
 """
-    try:
-        resp = model.generate_content(prompt)
-        return resp.text.strip()
-    except Exception as e:
-        return f"(AI unavailable, showing fallback advisory — {e})\n\n" + _fallback_answer(aqi_value, aqi_label)
+    result = _generate_with_fallback(prompt)
+    if result:
+        return result
+    return _fallback_answer(aqi_value, aqi_label)
 
 
 def _fallback_answer(aqi_value, aqi_label):

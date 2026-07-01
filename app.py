@@ -34,10 +34,16 @@ html, body, [class*="css"] {
     font-family: 'Space Grotesk', sans-serif;
 }
 
+/* ── Hide Streamlit header & top white bar */
+[data-testid="stHeader"], .stAppHeader {
+    display: none !important;
+}
+
 /* ── App background */
 .stApp {
     background: linear-gradient(135deg, #0d1117 0%, #0f1923 50%, #0d1117 100%);
     color: #e6edf3;
+    padding-top: 0px !important;
 }
 
 /* ── Sidebar */
@@ -51,14 +57,20 @@ html, body, [class*="css"] {
     color: #79c0ff;
 }
 
-/* ── Metric cards */
+/* ── Metric cards (Equal height & flexbox centered) */
 .metric-card {
     background: linear-gradient(135deg, #161b22, #1c2533);
     border: 1px solid #30363d;
     border-radius: 14px;
-    padding: 24px 28px;
+    padding: 20px;
     text-align: center;
     box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 145px;
+    width: 100%;
 }
 .metric-title {
     font-size: 0.78rem;
@@ -69,7 +81,7 @@ html, body, [class*="css"] {
     margin-bottom: 6px;
 }
 .metric-value {
-    font-size: 3.2rem;
+    font-size: 2.2rem;
     font-weight: 700;
     line-height: 1;
 }
@@ -179,9 +191,16 @@ with st.sidebar:
     st.markdown("## :material/eco: AQI Platform")
     st.markdown("**AI-Driven Analytics**")
     st.markdown("---")
-    st.markdown("### :material/tune: Pollutant Inputs")
-    st.caption("Adjust the sliders to simulate air quality conditions.")
+    
+    st.markdown("### :material/public: Location Settings")
+    st.caption("Monitor live air quality values around the world.")
+    city_choice = st.selectbox("Select a city", SUGGESTED_CITIES, index=0)
+    custom_city = st.text_input("...or type any city name", "")
+    city_query = custom_city.strip() if custom_city.strip() else city_choice
 
+    st.markdown("---")
+    st.markdown("### :material/tune: Simulator Settings")
+    st.caption("Adjust sliders for the simulator tab.")
     co    = st.slider("CO AQI Value",    min_value=0.0, max_value=50.0,  value=3.0,  step=0.1)
     ozone = st.slider("Ozone AQI Value", min_value=0.0, max_value=100.0, value=35.0, step=0.5)
     no2   = st.slider("NO₂ AQI Value",   min_value=0.0, max_value=100.0, value=20.0, step=0.5)
@@ -205,7 +224,10 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
     st.markdown("---")
-    st.caption("Model: Random Forest Regressor | Sklearn")
+    st.caption("Model: Random Forest Regressor")
+
+# ── Fetch Live City Data (used across tabs) ──────────────────────────────────
+live = fetch_live_aqi(city_query)
 
 # ── Prediction ────────────────────────────────────────────────────────────────
 
@@ -227,14 +249,13 @@ tab_sim, tab_live, tab_forecast, tab_ai = st.tabs([
 
 with tab_sim:
     # ── Main Metric Row ───────────────────────────────────────────────────────
-
     c1, c2, c3, c4, c5 = st.columns(5)
 
-    for col, label, val, unit in [
-        (c1, "CO AQI",     co,            ""),
-        (c2, "Ozone AQI",  ozone,         ""),
-        (c3, "NO₂ AQI",    no2,           ""),
-        (c4, "PM 2.5 AQI", pm25,          ""),
+    for col, label, val in [
+        (c1, "CO AQI",     co),
+        (c2, "Ozone AQI",  ozone),
+        (c3, "NO₂ AQI",    no2),
+        (c4, "PM 2.5 AQI", pm25),
     ]:
         with col:
             st.markdown(f"""
@@ -248,14 +269,11 @@ with tab_sim:
         <div class="metric-card" style="border-color:{aqi_color}33;background:linear-gradient(135deg,{aqi_bg},{aqi_bg}aa);">
             <div class="metric-title">Predicted AQI</div>
             <div class="metric-value" style="color:{aqi_color};">{predicted_aqi:.1f}</div>
-            <div class="metric-sub" style="color:{aqi_color};">{aqi_label}</div>
+            <div class="metric-sub" style="color:{aqi_color};font-size:0.8rem;margin-top:2px;">{aqi_label}</div>
         </div>""", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
     # ── Charts Row ────────────────────────────────────────────────────────────────
-
-    left, right = st.columns([1, 1], gap="large")
+    left, right = st.columns([1, 1], gap="medium")
 
     # ── Gauge Chart ──────────────────────────────────────────────────────────────
     with left:
@@ -341,7 +359,6 @@ with tab_sim:
         st.plotly_chart(fig_bar, use_container_width=True)
 
     # ── Pollutant Contribution Bar ─────────────────────────────────────────────────
-
     st.markdown('<div class="section-header">Current Input Contribution Overview</div>', unsafe_allow_html=True)
 
     raw_vals   = [co, ozone, no2, pm25]
@@ -377,9 +394,7 @@ with tab_sim:
     st.plotly_chart(fig_inputs, use_container_width=True)
 
     # ── About the Data ────────────────────────────────────────────────────────────
-
     st.markdown('<div class="section-header">About the Data & AQI Formula</div>', unsafe_allow_html=True)
-
     st.markdown("""
     <div class="info-box">
     <b>What is AQI?</b><br>
@@ -422,14 +437,6 @@ with tab_live:
     st.markdown('<div class="section-header">Real-Time City AQI</div>', unsafe_allow_html=True)
     st.caption("Live data ingested from the AQICN global monitoring network — this is what makes the platform a real decision tool, not just a demo.")
 
-    col_city, col_btn = st.columns([3, 1])
-    with col_city:
-        city_choice = st.selectbox("Select a city", SUGGESTED_CITIES, index=0)
-        custom_city = st.text_input("...or type any city name", "")
-    city_query = custom_city.strip() if custom_city.strip() else city_choice
-
-    live = fetch_live_aqi(city_query)
-
     if live is None or live.get("error") == "no_token":
         st.warning(
             "No AQICN API token configured. Live city lookup needs a free token from "
@@ -445,17 +452,16 @@ with tab_live:
             st.markdown(f"""<div class="metric-card" style="border-color:{live_color}33;background:linear-gradient(135deg,{live_bg},{live_bg}aa);">
                 <div class="metric-title">{live['city']}</div>
                 <div class="metric-value" style="color:{live_color};">{live['aqi']}</div>
-                <div class="metric-sub" style="color:{live_color};">{live_label}</div></div>""", unsafe_allow_html=True)
+                <div class="metric-sub" style="color:{live_color};font-size:0.8rem;margin-top:2px;">{live_label}</div></div>""", unsafe_allow_html=True)
         for col, label, val in [(lc2, "CO", live["co"]), (lc3, "Ozone", live["ozone"]),
                                  (lc4, "NO₂", live["no2"]), (lc5, "PM 2.5", live["pm25"])]:
             with col:
                 st.markdown(f"""<div class="metric-card">
                     <div class="metric-title">{label}</div>
-                    <div class="metric-value" style="font-size:1.8rem;color:#c9d1d9;">{val}</div></div>""", unsafe_allow_html=True)
+                    <div class="metric-value" style="font-size:1.8rem;color:#c9d1d9;">{val:.1f}</div></div>""", unsafe_allow_html=True)
 
         st.caption(f"Dominant pollutant: **{live['dominant_pollutant']}** · Last updated: {live['time']}")
 
-        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="section-header">AI Advisory — Live Conditions</div>', unsafe_allow_html=True)
         with st.spinner("Generating advisory…"):
             live_advisory = generate_advisory(
@@ -464,19 +470,15 @@ with tab_live:
             )
         st.markdown(f'<div class="info-box">{live_advisory}</div>', unsafe_allow_html=True)
 
-        st.session_state["_last_live"] = live
-        st.session_state["_last_live_label"] = live_label
-
 # ── Tab: Forecast ─────────────────────────────────────────────────────────
 with tab_forecast:
     st.markdown('<div class="section-header">Multi-Day AQI Forecast</div>', unsafe_allow_html=True)
     st.caption("Forecast derived from the same live feed's projection data — shows what's coming, not just what is now.")
 
-    last_live = st.session_state.get("_last_live")
-    if not last_live or last_live.get("error"):
-        st.info("Look up a city in the **Live City AQI** tab first to see its forecast here.")
+    if live is None or live.get("error"):
+        st.info("Please select or search for a valid city in the sidebar to see its forecast.")
     else:
-        fdf = extract_forecast(last_live["raw"])
+        fdf = extract_forecast(live["raw"])
         if fdf.empty:
             st.warning("No forecast data available for this city from the live feed.")
         else:
@@ -506,9 +508,9 @@ with tab_forecast:
             with st.spinner("Generating advisory…"):
                 fc_advisory = answer_question(
                     "Given this forecast trend, what should I plan for over the next few days?",
-                    last_live["aqi"], st.session_state.get("_last_live_label", "n/a"),
-                    last_live["co"], last_live["ozone"], last_live["no2"], last_live["pm25"],
-                    city=last_live["city"], forecast_summary=summary, user_profile=user_profile,
+                    live["aqi"], classify_aqi(live["aqi"])[0],
+                    live["co"], live["ozone"], live["no2"], live["pm25"],
+                    city=live["city"], forecast_summary=summary, user_profile=user_profile,
                 )
             st.markdown(f'<div class="info-box">{fc_advisory}</div>', unsafe_allow_html=True)
 
@@ -523,19 +525,18 @@ with tab_ai:
         height=90,
     )
 
-    last_live = st.session_state.get("_last_live")
     use_live = False
-    if last_live and not last_live.get("error"):
-        use_live = st.checkbox(f"Use live data for {last_live['city']} instead of simulator sliders", value=True)
+    if live and not live.get("error"):
+        use_live = st.checkbox(f"Use live data for {live['city']} instead of simulator sliders", value=True)
 
     if st.button("Ask", type="primary"):
         if not question.strip():
             st.warning("Type a question first.")
         else:
-            if use_live and last_live:
-                q_aqi, q_label = last_live["aqi"], st.session_state.get("_last_live_label", "n/a")
-                q_co, q_ozone, q_no2, q_pm25 = last_live["co"], last_live["ozone"], last_live["no2"], last_live["pm25"]
-                q_city = last_live["city"]
+            if use_live and live:
+                q_aqi, q_label = live["aqi"], classify_aqi(live["aqi"])[0]
+                q_co, q_ozone, q_no2, q_pm25 = live["co"], live["ozone"], live["no2"], live["pm25"]
+                q_city = live["city"]
             else:
                 q_aqi, q_label = predicted_aqi, aqi_label
                 q_co, q_ozone, q_no2, q_pm25 = co, ozone, no2, pm25
@@ -548,14 +549,11 @@ with tab_ai:
                 )
             st.markdown(f'<div class="info-box">{answer}</div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
     st.caption("Needs a Gemini API key (`GEMINI_API_KEY`) to use the real model — without one, you'll get a rule-based fallback answer so the app still works.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
-
-st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(
-    '<div style="text-align:center;color:#484f58;font-size:0.78rem;">'
+    '<div style="text-align:center;color:#484f58;font-size:0.78rem;margin-top:20px;">'
     'AI-Driven AQI Analytics Platform &nbsp;|&nbsp; Built with Streamlit + Plotly + Scikit-Learn'
     '</div>',
     unsafe_allow_html=True,
