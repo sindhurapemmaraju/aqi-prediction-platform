@@ -333,7 +333,7 @@ with tab_sim:
             margin=dict(t=20, b=20, l=10, r=60),
             xaxis=dict(
                 showgrid=True, gridcolor="#21262d",
-                title="Relative Importance", titlefont={"color": "#8b949e"},
+                title={"text": "Relative Importance", "font": {"color": "#8b949e"}},
                 tickfont={"color": "#8b949e"},
             ),
             yaxis=dict(showgrid=False, tickfont={"size": 13}),
@@ -369,8 +369,7 @@ with tab_sim:
         xaxis=dict(showgrid=False, tickfont={"size": 13}),
         yaxis=dict(
             showgrid=True, gridcolor="#21262d",
-            title="AQI Sub-Index Value",
-            titlefont={"color": "#8b949e"},
+            title={"text": "AQI Sub-Index Value", "font": {"color": "#8b949e"}},
             tickfont={"color": "#8b949e"},
         ),
         bargap=0.35,
