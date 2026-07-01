@@ -20,7 +20,7 @@ try:
 except ImportError:
     genai = None
 
-MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 
 def _get_key():
@@ -33,31 +33,28 @@ def _get_key():
     return key
 
 
-def _configured_model(model_name=None):
+@st.cache_data(show_spinner=False, ttl=3600)
+def _cached_generate_content(model_name, prompt):
+    """Cached content generator to prevent repetitive API calls on Streamlit reruns."""
     if genai is None:
-        return None
+        raise RuntimeError("google-generativeai package not imported")
     key = _get_key()
     if not key:
-        return None
+        raise RuntimeError("GEMINI_API_KEY is not configured")
     genai.configure(api_key=key)
-    return genai.GenerativeModel(model_name or MODEL_NAME)
+    model = genai.GenerativeModel(model_name)
+    resp = model.generate_content(prompt)
+    return resp.text.strip()
 
 
 def _generate_with_fallback(prompt):
-    """Try to generate content using primary model, fallback to 1.5-flash on failure."""
-    model = _configured_model()
-    if model is None:
-        return None
+    """Try to generate content using primary model, fallback to 2.5-flash-lite on failure."""
     try:
-        resp = model.generate_content(prompt)
-        return resp.text.strip()
+        return _cached_generate_content(MODEL_NAME, prompt)
     except Exception as e:
-        print(f"[AI Fallback] Primary model failed: {e}. Trying gemini-1.5-flash...")
+        print(f"[AI Fallback] Primary model ({MODEL_NAME}) failed: {e}. Trying fallback...")
         try:
-            fallback_model = _configured_model("gemini-1.5-flash")
-            if fallback_model:
-                resp = fallback_model.generate_content(prompt)
-                return resp.text.strip()
+            return _cached_generate_content("gemini-2.5-flash-lite", prompt)
         except Exception as fe:
             print(f"[AI Fallback] Fallback model failed: {fe}")
     return None

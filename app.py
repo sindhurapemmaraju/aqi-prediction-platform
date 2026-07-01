@@ -11,7 +11,7 @@ import plotly.express as px
 import pandas as pd
 import os
 
-from live_data import fetch_live_aqi, SUGGESTED_CITIES
+from live_data import fetch_live_aqi
 from forecast_engine import extract_forecast, daily_overall_forecast, trend_direction
 from ai_advisor import answer_question, generate_advisory
 
@@ -193,10 +193,8 @@ with st.sidebar:
     st.markdown("---")
     
     st.markdown("### :material/public: Location Settings")
-    st.caption("Monitor live air quality values around the world.")
-    city_choice = st.selectbox("Select a city", SUGGESTED_CITIES, index=0)
-    custom_city = st.text_input("...or type any city name", "")
-    city_query = custom_city.strip() if custom_city.strip() else city_choice
+    st.caption("Type any city name around the world to fetch live AQI.")
+    city_query = st.text_input("Enter city name", "Hyderabad").strip()
 
     st.markdown("---")
     st.markdown("### :material/tune: Simulator Settings")
