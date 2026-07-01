@@ -19,7 +19,7 @@ from ai_advisor import answer_question, generate_advisory
 
 st.set_page_config(
     page_title="AQI Analytics Platform",
-    page_icon="🌿",
+    page_icon=":material/eco:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -176,19 +176,19 @@ FEATURE_LABELS = ["CO", "Ozone", "NO₂", "PM 2.5"]
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("## 🌿 AQI Platform")
+    st.markdown("## :material/eco: AQI Platform")
     st.markdown("**AI-Driven Analytics**")
     st.markdown("---")
-    st.markdown("### 🎚️ Pollutant Inputs")
+    st.markdown("### :material/tune: Pollutant Inputs")
     st.caption("Adjust the sliders to simulate air quality conditions.")
 
-    co    = st.slider("🟤 CO AQI Value",    min_value=0.0, max_value=50.0,  value=3.0,  step=0.1)
-    ozone = st.slider("🔵 Ozone AQI Value", min_value=0.0, max_value=100.0, value=35.0, step=0.5)
-    no2   = st.slider("🟠 NO₂ AQI Value",   min_value=0.0, max_value=100.0, value=20.0, step=0.5)
-    pm25  = st.slider("🔴 PM 2.5 AQI Value",min_value=0.0, max_value=300.0, value=55.0, step=1.0)
+    co    = st.slider("CO AQI Value",    min_value=0.0, max_value=50.0,  value=3.0,  step=0.1)
+    ozone = st.slider("Ozone AQI Value", min_value=0.0, max_value=100.0, value=35.0, step=0.5)
+    no2   = st.slider("NO₂ AQI Value",   min_value=0.0, max_value=100.0, value=20.0, step=0.5)
+    pm25  = st.slider("PM 2.5 AQI Value",min_value=0.0, max_value=300.0, value=55.0, step=1.0)
 
     st.markdown("---")
-    st.markdown("### 👤 Who's asking?")
+    st.markdown("### :material/person: Who's asking?")
     user_profile = st.selectbox(
         "Personalize advisories for:",
         ["General public", "Asthma / respiratory condition", "Parent of young children",
@@ -197,7 +197,7 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown("##### 📊 AQI Scale Reference")
+    st.markdown("##### :material/legend_toggle: AQI Scale Reference")
     for ceil, lbl, col, _ in AQI_SCALE:
         st.markdown(
             f'<span style="color:{col};">●</span> **{lbl}** '
@@ -217,12 +217,12 @@ aqi_label, aqi_color, aqi_bg = classify_aqi(predicted_aqi)
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
-st.markdown('<div class="hero-title">🌍 AQI Decision Intelligence Platform</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title">AQI Decision Intelligence Platform</div>', unsafe_allow_html=True)
 st.markdown('<div class="hero-sub">Simulate, monitor, forecast, and ask — everything you need to decide what to do about the air you\'re breathing</div>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
 tab_sim, tab_live, tab_forecast, tab_ai = st.tabs([
-    "🎛️ Simulator", "🌐 Live City AQI", "📅 Forecast", "🤖 Ask AI"
+    ":material/tune: Simulator", ":material/public: Live City AQI", ":material/calendar_today: Forecast", ":material/smart_toy: Ask AI"
 ])
 
 with tab_sim:
@@ -259,7 +259,7 @@ with tab_sim:
 
     # ── Gauge Chart ──────────────────────────────────────────────────────────────
     with left:
-        st.markdown('<div class="section-header">📊 AQI Gauge</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">AQI Gauge</div>', unsafe_allow_html=True)
 
         gauge_steps = [
             {"range": [0,   50],  "color": "#0d2c1a"},
@@ -303,7 +303,7 @@ with tab_sim:
 
     # ── Feature Importance ───────────────────────────────────────────────────────
     with right:
-        st.markdown('<div class="section-header">🔬 Feature Importance</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">Feature Importance</div>', unsafe_allow_html=True)
 
         importances = model.feature_importances_
         fi_df = pd.DataFrame({
@@ -342,7 +342,7 @@ with tab_sim:
 
     # ── Pollutant Contribution Bar ─────────────────────────────────────────────────
 
-    st.markdown('<div class="section-header">📈 Current Input Contribution Overview</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Current Input Contribution Overview</div>', unsafe_allow_html=True)
 
     raw_vals   = [co, ozone, no2, pm25]
     fig_inputs = go.Figure()
@@ -378,7 +378,7 @@ with tab_sim:
 
     # ── About the Data ────────────────────────────────────────────────────────────
 
-    st.markdown('<div class="section-header">📚 About the Data & AQI Formula</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">About the Data & AQI Formula</div>', unsafe_allow_html=True)
 
     st.markdown("""
     <div class="info-box">
@@ -409,7 +409,7 @@ with tab_sim:
     """, unsafe_allow_html=True)
 
     # ── AI Advisory Card ─────────────────────────────────────────────────────
-    st.markdown('<div class="section-header">🤖 AI Advisory</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">AI Advisory</div>', unsafe_allow_html=True)
     with st.spinner("Generating advisory…"):
         advisory_text = generate_advisory(
             predicted_aqi, aqi_label, co, ozone, no2, pm25,
@@ -419,7 +419,7 @@ with tab_sim:
 
 # ── Tab: Live City AQI ──────────────────────────────────────────────────────
 with tab_live:
-    st.markdown('<div class="section-header">🌐 Real-Time City AQI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Real-Time City AQI</div>', unsafe_allow_html=True)
     st.caption("Live data ingested from the AQICN global monitoring network — this is what makes the platform a real decision tool, not just a demo.")
 
     col_city, col_btn = st.columns([3, 1])
@@ -432,7 +432,7 @@ with tab_live:
 
     if live is None or live.get("error") == "no_token":
         st.warning(
-            "⚠️ No AQICN API token configured. Live city lookup needs a free token from "
+            "No AQICN API token configured. Live city lookup needs a free token from "
             "[aqicn.org/data-platform/token](https://aqicn.org/data-platform/token/), "
             "set as the `AQICN_TOKEN` environment variable or in `st.secrets`."
         )
@@ -456,7 +456,7 @@ with tab_live:
         st.caption(f"Dominant pollutant: **{live['dominant_pollutant']}** · Last updated: {live['time']}")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="section-header">🤖 AI Advisory — Live Conditions</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">AI Advisory — Live Conditions</div>', unsafe_allow_html=True)
         with st.spinner("Generating advisory…"):
             live_advisory = generate_advisory(
                 live["aqi"], live_label, live["co"], live["ozone"], live["no2"], live["pm25"],
@@ -469,7 +469,7 @@ with tab_live:
 
 # ── Tab: Forecast ─────────────────────────────────────────────────────────
 with tab_forecast:
-    st.markdown('<div class="section-header">📅 Multi-Day AQI Forecast</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Multi-Day AQI Forecast</div>', unsafe_allow_html=True)
     st.caption("Forecast derived from the same live feed's projection data — shows what's coming, not just what is now.")
 
     last_live = st.session_state.get("_last_live")
@@ -482,7 +482,7 @@ with tab_forecast:
         else:
             pivot = daily_overall_forecast(fdf)
             direction = trend_direction(pivot)
-            arrow = {"rising": "📈 Rising", "falling": "📉 Falling", "stable": "➡️ Stable"}[direction]
+            arrow = {"rising": ":material/trending_up: Rising", "falling": ":material/trending_down: Falling", "stable": ":material/trending_flat: Stable"}[direction]
             st.markdown(f"**Trend over forecast window: {arrow}**")
 
             fig_fc = go.Figure()
@@ -501,7 +501,7 @@ with tab_forecast:
             st.plotly_chart(fig_fc, use_container_width=True)
             st.dataframe(pivot, use_container_width=True, hide_index=True)
 
-            st.markdown('<div class="section-header">🤖 AI Advisory — Forecast-Aware</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">AI Advisory — Forecast-Aware</div>', unsafe_allow_html=True)
             summary = f"{direction} trend, moving from {pivot['overall_aqi_est'].iloc[0]:.0f} to {pivot['overall_aqi_est'].iloc[-1]:.0f} over the forecast window."
             with st.spinner("Generating advisory…"):
                 fc_advisory = answer_question(
@@ -514,7 +514,7 @@ with tab_forecast:
 
 # ── Tab: Ask AI ────────────────────────────────────────────────────────────
 with tab_ai:
-    st.markdown('<div class="section-header">🤖 Ask the AQI Assistant</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Ask the AQI Assistant</div>', unsafe_allow_html=True)
     st.caption("Ask a natural-language question grounded in the simulator's current values (or the live city data if you've looked one up).")
 
     question = st.text_area(
@@ -549,7 +549,7 @@ with tab_ai:
             st.markdown(f'<div class="info-box">{answer}</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("💡 Needs a Gemini API key (`GEMINI_API_KEY`) to use the real model — without one, you'll get a rule-based fallback answer so the app still works.")
+    st.caption("Needs a Gemini API key (`GEMINI_API_KEY`) to use the real model — without one, you'll get a rule-based fallback answer so the app still works.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 
