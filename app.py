@@ -197,14 +197,6 @@ with st.sidebar:
     city_query = st.text_input("Enter city name", "Hyderabad").strip()
 
     st.markdown("---")
-    st.markdown("### :material/tune: Simulator Settings")
-    st.caption("Adjust sliders for the simulator tab.")
-    co    = st.slider("CO AQI Value",    min_value=0.0, max_value=50.0,  value=3.0,  step=0.1)
-    ozone = st.slider("Ozone AQI Value", min_value=0.0, max_value=100.0, value=35.0, step=0.5)
-    no2   = st.slider("NO₂ AQI Value",   min_value=0.0, max_value=100.0, value=20.0, step=0.5)
-    pm25  = st.slider("PM 2.5 AQI Value",min_value=0.0, max_value=300.0, value=55.0, step=1.0)
-
-    st.markdown("---")
     st.markdown("### :material/person: Who's asking?")
     user_profile = st.selectbox(
         "Personalize advisories for:",
@@ -224,211 +216,18 @@ with st.sidebar:
     st.markdown("---")
     st.caption("Model: Random Forest Regressor")
 
-# ── Fetch Live City Data (used across tabs) ──────────────────────────────────
+# ── Fetch Live City Data ──────────────────────────────────────────────────────
 live = fetch_live_aqi(city_query)
-
-# ── Prediction ────────────────────────────────────────────────────────────────
-
-input_arr = np.array([[co, ozone, no2, pm25]])
-if scaler:
-    input_arr = scaler.transform(input_arr)
-predicted_aqi = float(model.predict(input_arr)[0])
-aqi_label, aqi_color, aqi_bg = classify_aqi(predicted_aqi)
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
 st.markdown('<div class="hero-title">AQI Decision Intelligence Platform</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-sub">Simulate, monitor, forecast, and ask — everything you need to decide what to do about the air you\'re breathing</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-sub">Real-time air quality tracking, forecast analysis, and model-driven AI decision advisories</div>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-tab_sim, tab_live, tab_forecast, tab_ai = st.tabs([
-    ":material/tune: Simulator", ":material/public: Live City AQI", ":material/calendar_today: Forecast", ":material/smart_toy: Ask AI"
+tab_live, tab_forecast, tab_ai = st.tabs([
+    ":material/public: Live City AQI", ":material/calendar_today: Forecast", ":material/smart_toy: Ask AI"
 ])
-
-with tab_sim:
-    # ── Main Metric Row ───────────────────────────────────────────────────────
-    c1, c2, c3, c4, c5 = st.columns(5)
-
-    for col, label, val in [
-        (c1, "CO AQI",     co),
-        (c2, "Ozone AQI",  ozone),
-        (c3, "NO₂ AQI",    no2),
-        (c4, "PM 2.5 AQI", pm25),
-    ]:
-        with col:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-title">{label}</div>
-                <div class="metric-value" style="font-size:1.8rem;color:#c9d1d9;">{val:.1f}</div>
-            </div>""", unsafe_allow_html=True)
-
-    with c5:
-        st.markdown(f"""
-        <div class="metric-card" style="border-color:{aqi_color}33;background:linear-gradient(135deg,{aqi_bg},{aqi_bg}aa);">
-            <div class="metric-title">Predicted AQI</div>
-            <div class="metric-value" style="color:{aqi_color};">{predicted_aqi:.1f}</div>
-            <div class="metric-sub" style="color:{aqi_color};font-size:0.8rem;margin-top:2px;">{aqi_label}</div>
-        </div>""", unsafe_allow_html=True)
-
-    # ── Charts Row ────────────────────────────────────────────────────────────────
-    left, right = st.columns([1, 1], gap="medium")
-
-    # ── Gauge Chart ──────────────────────────────────────────────────────────────
-    with left:
-        st.markdown('<div class="section-header">AQI Gauge</div>', unsafe_allow_html=True)
-
-        gauge_steps = [
-            {"range": [0,   50],  "color": "#0d2c1a"},
-            {"range": [50,  100], "color": "#2c200a"},
-            {"range": [100, 150], "color": "#2c150a"},
-            {"range": [150, 200], "color": "#2c0b0b"},
-            {"range": [200, 300], "color": "#1a0d2c"},
-            {"range": [300, 500], "color": "#2c0505"},
-        ]
-        fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=predicted_aqi,
-            domain={"x": [0, 1], "y": [0, 1]},
-            title={"text": f"<b>{aqi_label}</b>", "font": {"size": 18, "color": aqi_color}},
-            number={"font": {"size": 52, "color": aqi_color}, "suffix": ""},
-            gauge={
-                "axis": {
-                    "range": [0, 500],
-                    "tickwidth": 1,
-                    "tickcolor": "#30363d",
-                    "tickfont": {"color": "#8b949e", "size": 11},
-                },
-                "bar": {"color": aqi_color, "thickness": 0.25},
-                "bgcolor": "#0d1117",
-                "borderwidth": 0,
-                "steps": gauge_steps,
-                "threshold": {
-                    "line": {"color": "#ffffff", "width": 2},
-                    "thickness": 0.75,
-                    "value": predicted_aqi,
-                },
-            },
-        ))
-        fig_gauge.update_layout(
-            paper_bgcolor="#161b22",
-            font={"family": "Space Grotesk"},
-            height=300,
-            margin=dict(t=40, b=10, l=20, r=20),
-        )
-        st.plotly_chart(fig_gauge, use_container_width=True)
-
-    # ── Feature Importance ───────────────────────────────────────────────────────
-    with right:
-        st.markdown('<div class="section-header">Feature Importance</div>', unsafe_allow_html=True)
-
-        importances = model.feature_importances_
-        fi_df = pd.DataFrame({
-            "Pollutant":   FEATURE_LABELS,
-            "Importance":  importances,
-            "Feature":     FEATURES,
-        }).sort_values("Importance", ascending=True)
-
-        bar_colors = ["#388bfd", "#56d364", "#e3b341", "#f85149"]
-        fig_bar = go.Figure(go.Bar(
-            x=fi_df["Importance"],
-            y=fi_df["Pollutant"],
-            orientation="h",
-            marker=dict(
-                color=bar_colors,
-                line=dict(width=0),
-            ),
-            text=[f"{v:.3f}" for v in fi_df["Importance"]],
-            textposition="outside",
-            textfont={"color": "#c9d1d9", "size": 12},
-        ))
-        fig_bar.update_layout(
-            paper_bgcolor="#161b22",
-            plot_bgcolor="#161b22",
-            font={"family": "Space Grotesk", "color": "#c9d1d9"},
-            height=300,
-            margin=dict(t=20, b=20, l=10, r=60),
-            xaxis=dict(
-                showgrid=True, gridcolor="#21262d",
-                title={"text": "Relative Importance", "font": {"color": "#8b949e"}},
-                tickfont={"color": "#8b949e"},
-            ),
-            yaxis=dict(showgrid=False, tickfont={"size": 13}),
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    # ── Pollutant Contribution Bar ─────────────────────────────────────────────────
-    st.markdown('<div class="section-header">Current Input Contribution Overview</div>', unsafe_allow_html=True)
-
-    raw_vals   = [co, ozone, no2, pm25]
-    fig_inputs = go.Figure()
-    colors_map = ["#388bfd", "#56d364", "#e3b341", "#f85149"]
-
-    for i, (label, val, color) in enumerate(zip(FEATURE_LABELS, raw_vals, colors_map)):
-        fig_inputs.add_trace(go.Bar(
-            name=label,
-            x=[label],
-            y=[val],
-            marker_color=color,
-            text=f"{val:.1f}",
-            textposition="outside",
-            textfont={"color": "#c9d1d9"},
-        ))
-
-    fig_inputs.update_layout(
-        paper_bgcolor="#161b22",
-        plot_bgcolor="#161b22",
-        font={"family": "Space Grotesk", "color": "#c9d1d9"},
-        height=260,
-        margin=dict(t=20, b=20, l=10, r=10),
-        showlegend=False,
-        xaxis=dict(showgrid=False, tickfont={"size": 13}),
-        yaxis=dict(
-            showgrid=True, gridcolor="#21262d",
-            title={"text": "AQI Sub-Index Value", "font": {"color": "#8b949e"}},
-            tickfont={"color": "#8b949e"},
-        ),
-        bargap=0.35,
-    )
-    st.plotly_chart(fig_inputs, use_container_width=True)
-
-    # ── About the Data ────────────────────────────────────────────────────────────
-    st.markdown('<div class="section-header">About the Data & AQI Formula</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="info-box">
-    <b>What is AQI?</b><br>
-    The <b>Air Quality Index (AQI)</b> is a standardised scale (0–500) used by the EPA to communicate how
-    polluted the air currently is, or how polluted it is forecast to become.<br><br>
-
-    <b>How is it computed?</b><br>
-    The overall AQI is determined by the <i>highest</i> sub-index among the measured pollutants:
-
-    <pre style="background:#0d1117;padding:10px;border-radius:8px;margin-top:8px;color:#79c0ff;">
-    AQI = max( I_CO, I_Ozone, I_NO₂, I_PM2.5 )
-
-    Each sub-index Iₚ is computed via EPA breakpoint interpolation:
-      Iₚ = [(I_hi - I_lo) / (C_hi - C_lo)] × (Cₚ - C_lo) + I_lo
-    </pre>
-
-    <b>Dataset Features used in this model:</b><br>
-    • <b>CO AQI Value</b> — Carbon Monoxide sub-index<br>
-    • <b>Ozone AQI Value</b> — Ground-level Ozone sub-index<br>
-    • <b>NO₂ AQI Value</b> — Nitrogen Dioxide sub-index<br>
-    • <b>PM 2.5 AQI Value</b> — Fine Particulate Matter sub-index<br><br>
-
-    <b>Model:</b> Random Forest Regressor (200 trees) trained with StandardScaler normalisation.
-    The feature importance chart above shows the relative contribution of each pollutant
-    to the model's prediction.
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── AI Advisory Card ─────────────────────────────────────────────────────
-    st.markdown('<div class="section-header">AI Advisory</div>', unsafe_allow_html=True)
-    with st.spinner("Generating advisory…"):
-        advisory_text = generate_advisory(
-            predicted_aqi, aqi_label, co, ozone, no2, pm25,
-            user_profile=user_profile,
-        )
-    st.markdown(f'<div class="info-box">{advisory_text}</div>', unsafe_allow_html=True)
 
 # ── Tab: Live City AQI ──────────────────────────────────────────────────────
 with tab_live:
@@ -445,6 +244,15 @@ with tab_live:
         st.error(f"Couldn't fetch data for '{city_query}': {live['error']}")
     else:
         live_label, live_color, live_bg = classify_aqi(live["aqi"])
+        
+        # Calculate Random Forest prediction on real-time city pollutants
+        live_input = np.array([[live["co"], live["ozone"], live["no2"], live["pm25"]]])
+        if scaler:
+            live_input = scaler.transform(live_input)
+        predicted_aqi = float(model.predict(live_input)[0])
+        pred_label, pred_color, pred_bg = classify_aqi(predicted_aqi)
+
+        # ── Metric Row ──
         lc1, lc2, lc3, lc4, lc5 = st.columns(5)
         with lc1:
             st.markdown(f"""<div class="metric-card" style="border-color:{live_color}33;background:linear-gradient(135deg,{live_bg},{live_bg}aa);">
@@ -460,6 +268,138 @@ with tab_live:
 
         st.caption(f"Dominant pollutant: **{live['dominant_pollutant']}** · Last updated: {live['time']}")
 
+        # ── Gauge and Model Comparison Row ──
+        left, right = st.columns([1, 1], gap="medium")
+        
+        with left:
+            st.markdown('<div class="section-header">AQI Gauge (Actual Live)</div>', unsafe_allow_html=True)
+            gauge_steps = [
+                {"range": [0,   50],  "color": "#0d2c1a"},
+                {"range": [50,  100], "color": "#2c200a"},
+                {"range": [100, 150], "color": "#2c150a"},
+                {"range": [150, 200], "color": "#2c0b0b"},
+                {"range": [200, 300], "color": "#1a0d2c"},
+                {"range": [300, 500], "color": "#2c0505"},
+            ]
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number+delta",
+                value=live["aqi"],
+                domain={"x": [0, 1], "y": [0, 1]},
+                title={"text": f"<b>{live_label}</b>", "font": {"size": 18, "color": live_color}},
+                number={"font": {"size": 52, "color": live_color}, "suffix": ""},
+                gauge={
+                    "axis": {
+                        "range": [0, 500],
+                        "tickwidth": 1,
+                        "tickcolor": "#30363d",
+                        "tickfont": {"color": "#8b949e", "size": 11},
+                    },
+                    "bar": {"color": live_color, "thickness": 0.25},
+                    "bgcolor": "#0d1117",
+                    "borderwidth": 0,
+                    "steps": gauge_steps,
+                    "threshold": {
+                        "line": {"color": "#ffffff", "width": 2},
+                        "thickness": 0.75,
+                        "value": live["aqi"],
+                    },
+                },
+            ))
+            fig_gauge.update_layout(
+                paper_bgcolor="#161b22",
+                font={"family": "Space Grotesk"},
+                height=280,
+                margin=dict(t=40, b=10, l=20, r=20),
+            )
+            st.plotly_chart(fig_gauge, use_container_width=True)
+
+        with right:
+            st.markdown('<div class="section-header">ML Predictor Comparison</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="metric-card" style="border-color:{pred_color}33;background:linear-gradient(135deg,{pred_bg},{pred_bg}aa);height:280px;width:100%;">
+                <div class="metric-title" style="font-size:0.9rem;">Random Forest Prediction</div>
+                <div class="metric-value" style="color:{pred_color};font-size:4rem;margin-top:10px;">{predicted_aqi:.1f}</div>
+                <div class="metric-sub" style="color:{pred_color};font-size:1.1rem;font-weight:600;margin-top:10px;">{pred_label}</div>
+                <div style="font-size:0.8rem;color:#8b949e;margin-top:20px;">
+                    Model inputs: Live readings for CO, Ozone, NO₂, PM 2.5
+                </div>
+            </div>""", unsafe_allow_html=True)
+
+        # ── Contribution and Feature Importance Row ──
+        c_left, c_right = st.columns([1, 1], gap="medium")
+        
+        with c_left:
+            st.markdown('<div class="section-header">Live Pollutant Contribution</div>', unsafe_allow_html=True)
+            raw_vals   = [live["co"], live["ozone"], live["no2"], live["pm25"]]
+            fig_inputs = go.Figure()
+            colors_map = ["#388bfd", "#56d364", "#e3b341", "#f85149"]
+
+            for i, (label, val, color) in enumerate(zip(FEATURE_LABELS, raw_vals, colors_map)):
+                fig_inputs.add_trace(go.Bar(
+                    name=label,
+                    x=[label],
+                    y=[val],
+                    marker_color=color,
+                    text=f"{val:.1f}",
+                    textposition="outside",
+                    textfont={"color": "#c9d1d9"},
+                ))
+
+            fig_inputs.update_layout(
+                paper_bgcolor="#161b22",
+                plot_bgcolor="#161b22",
+                font={"family": "Space Grotesk", "color": "#c9d1d9"},
+                height=260,
+                margin=dict(t=20, b=20, l=10, r=10),
+                showlegend=False,
+                xaxis=dict(showgrid=False, tickfont={"size": 13}),
+                yaxis=dict(
+                    showgrid=True, gridcolor="#21262d",
+                    title={"text": "AQI Sub-Index Value", "font": {"color": "#8b949e"}},
+                    tickfont={"color": "#8b949e"},
+                ),
+                bargap=0.35,
+            )
+            st.plotly_chart(fig_inputs, use_container_width=True)
+
+        with c_right:
+            st.markdown('<div class="section-header">Model Feature Importance</div>', unsafe_allow_html=True)
+            importances = model.feature_importances_
+            fi_df = pd.DataFrame({
+                "Pollutant":   FEATURE_LABELS,
+                "Importance":  importances,
+                "Feature":     FEATURES,
+            }).sort_values("Importance", ascending=True)
+
+            bar_colors = ["#388bfd", "#56d364", "#e3b341", "#f85149"]
+            fig_bar = go.Figure(go.Bar(
+                x=fi_df["Importance"],
+                y=fi_df["Pollutant"],
+                orientation="h",
+                marker=dict(
+                    color=bar_colors,
+                    line=dict(width=0),
+                ),
+                text=[f"{v:.3f}" for v in fi_df["Importance"]],
+                textposition="outside",
+                textfont={"color": "#c9d1d9", "size": 12},
+            ))
+            fig_bar.update_layout(
+                paper_bgcolor="#161b22",
+                plot_bgcolor="#161b22",
+                font={"family": "Space Grotesk", "color": "#c9d1d9"},
+                height=260,
+                margin=dict(t=20, b=20, l=10, r=60),
+                xaxis=dict(
+                    showgrid=True, gridcolor="#21262d",
+                    title={"text": "Relative Importance", "font": {"color": "#8b949e"}},
+                    tickfont={"color": "#8b949e"},
+                ),
+                yaxis=dict(showgrid=False, tickfont={"size": 13}),
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        # ── AI Advisory Card ──
         st.markdown('<div class="section-header">AI Advisory — Live Conditions</div>', unsafe_allow_html=True)
         with st.spinner("Generating advisory…"):
             live_advisory = generate_advisory(
@@ -515,7 +455,7 @@ with tab_forecast:
 # ── Tab: Ask AI ────────────────────────────────────────────────────────────
 with tab_ai:
     st.markdown('<div class="section-header">Ask the AQI Assistant</div>', unsafe_allow_html=True)
-    st.caption("Ask a natural-language question grounded in the simulator's current values (or the live city data if you've looked one up).")
+    st.caption("Ask a natural-language question grounded in the selected city's live air quality metrics.")
 
     question = st.text_area(
         "Your question",
@@ -523,29 +463,24 @@ with tab_ai:
         height=90,
     )
 
-    use_live = False
-    if live and not live.get("error"):
-        use_live = st.checkbox(f"Use live data for {live['city']} instead of simulator sliders", value=True)
-
     if st.button("Ask", type="primary"):
         if not question.strip():
             st.warning("Type a question first.")
         else:
-            if use_live and live:
-                q_aqi, q_label = live["aqi"], classify_aqi(live["aqi"])[0]
+            if live and not live.get("error"):
+                q_aqi = live["aqi"]
+                q_label = classify_aqi(live["aqi"])[0]
                 q_co, q_ozone, q_no2, q_pm25 = live["co"], live["ozone"], live["no2"], live["pm25"]
                 q_city = live["city"]
+                
+                with st.spinner("Thinking…"):
+                    answer = answer_question(
+                        question, q_aqi, q_label, q_co, q_ozone, q_no2, q_pm25,
+                        city=q_city, user_profile=user_profile,
+                    )
+                st.markdown(f'<div class="info-box">{answer}</div>', unsafe_allow_html=True)
             else:
-                q_aqi, q_label = predicted_aqi, aqi_label
-                q_co, q_ozone, q_no2, q_pm25 = co, ozone, no2, pm25
-                q_city = None
-
-            with st.spinner("Thinking…"):
-                answer = answer_question(
-                    question, q_aqi, q_label, q_co, q_ozone, q_no2, q_pm25,
-                    city=q_city, user_profile=user_profile,
-                )
-            st.markdown(f'<div class="info-box">{answer}</div>', unsafe_allow_html=True)
+                st.error("No valid live city data loaded to ground the AI assistant.")
 
     st.caption("Needs a Gemini API key (`GEMINI_API_KEY`) to use the real model — without one, you'll get a rule-based fallback answer so the app still works.")
 
