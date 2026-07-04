@@ -70,7 +70,23 @@ If you want to train or update the model parameters, run the training pipeline:
 ```bash
 python train_model.py
 ```
-This prints the MAE, MSE, and R² scores and generates `aqi_model.pkl` + `scaler.pkl` artifacts.
+This script splits the data 80% train / 20% test, normalizes features using a `StandardScaler`, and trains a **Random Forest Regressor** (`n_estimators=200`, `min_samples_split=4`, `min_samples_leaf=2`).
+
+#### 📊 Baseline Model Performance Metrics:
+When trained, the model logs the following evaluation scores:
+* **Mean Absolute Error (MAE)**: `7.3753` (Average absolute deviation of predicted AQI from actual index)
+* **Mean Squared Error (MSE)**: `83.6984`
+* **Root Mean Squared Error (RMSE)**: `9.1487`
+* **R-squared (R²)**: `0.8834` (The model explains **88.3%** of the variance in the target AQI)
+
+#### 🔍 ML Feature Importance Ratings:
+The Random Forest model assigns weights to individual pollutants indicating their impact on the overall predicted index:
+1. **PM 2.5 (`pm2.5 aqi value`)**: `0.8625` (86.25% - Primary driving pollutant)
+2. **CO (`co aqi value`)**: `0.0584` (5.84%)
+3. **Ozone (`ozone aqi value`)**: `0.0560` (5.60%)
+4. **NO₂ (`no2 aqi value`)**: `0.0231` (2.31%)
+
+This saves the `aqi_model.pkl` and `scaler.pkl` artifacts directly to your folder.
 
 ### 3. Add API Keys
 Create a file at `.streamlit/secrets.toml` and configure your API keys:
