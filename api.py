@@ -29,12 +29,12 @@ scaler = joblib.load(SCALER_PATH) if os.path.exists(SCALER_PATH) else None
 
 # ── AQI Classification Helper ──────────────────────────────────────────────────
 AQI_SCALE = [
-    (50,  "Good",                  "#56d364"),
-    (100, "Moderate",              "#e3b341"),
-    (150, "Unhealthy for Sensitive","#f0883e"),
-    (200, "Unhealthy",             "#f85149"),
-    (300, "Very Unhealthy",        "#bc8cff"),
-    (500, "Hazardous",             "#da3633"),
+    (50,  "Good",                  "#059669"),
+    (100, "Moderate",              "#d97706"),
+    (150, "Unhealthy for Sensitive","#ea580c"),
+    (200, "Unhealthy",             "#dc2626"),
+    (300, "Very Unhealthy",        "#9333ea"),
+    (500, "Hazardous",             "#be123c"),
 ]
 
 def classify_aqi(val: float):

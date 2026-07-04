@@ -1,121 +1,105 @@
 # 🌍 AQI Decision Intelligence Platform
-> An AI-powered air quality decision tool: simulate pollutant scenarios, pull real-time
-> city AQI, see a multi-day forecast, and ask a Gemini-powered assistant what to actually
-> *do* about it — not just what the numbers are.
 
-**Who it's for:** parents deciding whether kids can play outside, people with asthma
-planning their day, runners timing outdoor workouts, and anyone who wants a straight
-answer instead of a raw pollutant table.
+> A professional-grade, AI-powered air quality decision intelligence platform. It ingests real-time global monitoring data, projects multi-day trends, and generates conversational health advisories using state-of-the-art LLMs (Gemini 2.5, GPT-4o, and Claude) to help users make concrete, health-focused decisions.
+
+**Who it's for:** Asthma patients planning outdoor workouts, parents tracking local conditions, athletes training outdoors, and anyone looking for clear, health-centric guidance instead of raw pollutant data tables.
 
 ---
 
-## ✨ What's in this version
+## ✨ Features in this Version
 
-| Tab | What it does |
+| Dashboard Tab | Description |
 |---|---|
-| 🎛️ Simulator | Original Random Forest AQI predictor — adjust pollutant sliders, get an instant prediction + AI advisory |
-| 🌐 Live City AQI | Real-time data ingestion from the AQICN global monitoring network for any city |
-| 📅 Forecast | Multi-day AQI trend pulled from the live feed's forecast data, with a risk-direction summary |
-| 🤖 Ask AI | Free-form natural language Q&A grounded in current/live/forecast data, personalized by user profile (asthma, parent, elderly, athlete, general) |
-
-Every tab includes a **Gemini-generated advisory** — a specific, actionable
-recommendation, not just a category label. If no Gemini key is configured, the app
-falls back to a rule-based advisory so it still works end-to-end.
+| 🌐 **Live City AQI** | Real-time global AQI ingestion for any city worldwide, featuring a clean glassmorphic design, a unified **Air Quality Gauge**, a **Pollutants Breakdown** bar chart, and AI health advisories. |
+| 📅 **Forecast** | Multi-day AQI trend visualization extracted from live monitoring forecasts, summarized with an automatic risk-direction trend indicator. |
+| 🤖 **Ask AI** | An interactive conversational chat interface allowing users to ask natural-language questions grounded in the current city's live air quality metrics and forecast history. |
 
 ---
 
-## 📁 Folder Structure
+## 🏗️ Architecture & Technology Stack
+
+The platform is designed with a lightweight, clean, and highly robust Python architecture:
 
 ```
-aqi_platform/
-├── app.py               ← Streamlit dashboard (4 tabs)
-├── live_data.py          ← Real-time AQI ingestion (AQICN API)
-├── forecast_engine.py     ← Multi-day forecast extraction & trend logic
-├── ai_advisor.py           ← Gemini NL Q&A + advisory generation
-├── train_model.py        ← Model training script
-├── requirements.txt      ← Python dependencies
-├── aqi_data.csv          ← Your dataset (auto-generated if missing)
-├── aqi_model.pkl         ← Saved model  (created after training)
-└── scaler.pkl            ← Saved scaler (created after training)
+aqi-prediction-platform/
+├── app.py                  ← Streamlit UI controller (stateful navigation & CSS grid)
+├── live_data.py            ← Real-time data client (AQICN Global API)
+├── forecast_engine.py      ← Forecast parsing & trajectory analytics
+├── ai_advisor.py           ← Multi-provider REST router (Gemini 2.5, OpenAI, Anthropic)
+├── train_model.py          ← Model training script
+├── requirements.txt        ← Project dependency manifest
+├── .streamlit/
+│   ├── config.toml         ← Theme configuration (forces clean light mode contrasts)
+│   └── secrets.toml        ← Local API credentials (ignored by Git)
 ```
+
+### 🛠️ Core Technologies Used:
+* **Frontend UI**: **Streamlit** (Customized with glassmorphic CSS overlays, smooth scale hover transitions, and a stateful button-driven tab navigation that prevents client-side resets).
+* **Machine Learning**: **Scikit-Learn** (Random Forest Regressor + MinMaxScaler to predict overall air quality indexes).
+* **Visualizations**: **Plotly Graph Objects** (Responsive, transparent background gauges and horizontal/vertical charts synchronized with the official AQI color scheme).
+* **LLM Integration**: **Multi-Provider REST Router** (Zero-dependency integration that directly communicates with OpenAI, Google Gemini, and Anthropic APIs via `requests` and handles key failover silently).
 
 ---
 
-## 🚀 Setup Instructions (macOS)
+## ⚡ Silent Auto-Failover LLM Routing
+To ensure the app always returns high-quality, conversational insights, the platform features a silent backend routing mechanism:
+1. **Gemini 2.5 Flash** (Prioritized first due to free-tier availability and performance).
+2. **OpenAI GPT-4o-Mini** (Queried second if Gemini keys are missing or restricted).
+3. **Anthropic Claude 3.5 Sonnet** (Queried third).
+4. **Rule-Based Fallback**: If no keys are configured, the app falls back to a preset local rule-based warning engine so it remains fully functional offline.
 
-### Step 1 – Create & activate a virtual environment
-```bash
-cd aqi_platform
-python3 -m venv venv
-source venv/bin/activate
-```
+---
 
-### Step 2 – Install dependencies
+## 🚀 Setup & Installation (macOS)
+
+### 1. Initialize Virtual Environment & Dependencies
 ```bash
+# Clone the repository
+cd aqi-prediction-platform
+
+# Create and activate environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-Or install directly:
-```bash
-pip install streamlit scikit-learn plotly pandas numpy joblib
-```
-
-### Step 3 – (Optional) Add your dataset
-Place your CSV as `aqi_data.csv` in the project folder.
-Expected columns (case-insensitive, whitespace-tolerant):
-```
-co aqi value, ozone aqi value, no2 aqi value, pm2.5 aqi value, aqi value
-```
-If the file is missing, the training script auto-generates synthetic demo data.
-
-### Step 4 – Train the model
+### 2. Train the Random Forest Model
+If you want to train or update the model parameters, run the training pipeline:
 ```bash
 python train_model.py
 ```
-This prints MAE / MSE / R² metrics and saves `aqi_model.pkl` + `scaler.pkl`.
+This prints the MAE, MSE, and R² scores and generates `aqi_model.pkl` + `scaler.pkl` artifacts.
 
-### Step 5 – (Optional but recommended) Set API keys
-For the live city AQI and Gemini AI advisories, set these as environment variables
-(or add them to `.streamlit/secrets.toml`):
+### 3. Add API Keys
+Create a file at `.streamlit/secrets.toml` and configure your API keys:
+```toml
+# Get a free key at: https://aqicn.org/data-platform/token/
+AQICN_TOKEN = "your_aqicn_token_here"
 
-```bash
-export AQICN_TOKEN="your_free_aqicn_token"      # https://aqicn.org/data-platform/token/
-export GEMINI_API_KEY="your_gemini_api_key"     # https://aistudio.google.com/apikey
+# Set one or more of these AI keys:
+GEMINI_API_KEY = "your_google_ai_studio_key"
+OPENAI_API_KEY = "your_openai_api_key"
 ```
 
-The app runs fully without these — the Simulator tab always works, and AI advisories
-fall back to a rule-based response if no Gemini key is set.
-
-### Step 6 – Launch the Streamlit app
+### 4. Run the Platform
 ```bash
 streamlit run app.py
 ```
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+Access the dashboard in your browser at: `http://localhost:8501`.
 
 ---
 
-## 🎛️ How to Use the App
-1. Use the **sidebar sliders** to set CO, Ozone, NO₂, and PM 2.5 values.
-2. The **Predicted AQI** card updates instantly with a color-coded category.
-3. The **Gauge Chart** gives a visual sense of severity.
-4. The **Feature Importance** chart shows which pollutant drives predictions most.
-5. Scroll down for the **About the Data** section explaining the AQI formula.
+## 🌐 Deployment to Streamlit Cloud
 
----
-
-## 📊 AQI Categories
-| Range    | Category                    | Color  |
-|----------|-----------------------------|--------|
-| 0–50     | Good                        | 🟢 Green  |
-| 51–100   | Moderate                    | 🟡 Yellow |
-| 101–150  | Unhealthy for Sensitive Groups | 🟠 Orange |
-| 151–200  | Unhealthy                   | 🔴 Red    |
-| 201–300  | Very Unhealthy              | 🟣 Purple |
-| 301–500  | Hazardous                   | ☠️ Maroon |
-
----
-
-## 🛑 Deactivate Environment (when done)
-```bash
-deactivate
-```
+To host the app online for free on **Streamlit Community Cloud**:
+1. Push your code to your GitHub repository (your local `.streamlit/secrets.toml` is ignored via `.gitignore` to prevent leaking keys).
+2. Sign in to [share.streamlit.io](https://share.streamlit.io/) with your GitHub account.
+3. Click **New App**, select your repository, branch (`main`), and path (`app.py`).
+4. Click **Advanced Settings** and add your secrets:
+   ```toml
+   AQICN_TOKEN = "your_api_token"
+   GEMINI_API_KEY = "your_gemini_key"
+   ```
+5. Click **Deploy**. Your app will compile and generate its own public shareable URL!

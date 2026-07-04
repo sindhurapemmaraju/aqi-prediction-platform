@@ -13,7 +13,7 @@ import os
 
 from live_data import fetch_live_aqi
 from forecast_engine import extract_forecast, daily_overall_forecast, trend_direction
-from ai_advisor import answer_question, generate_advisory
+from ai_advisor import answer_question, generate_advisory, _get_api_keys
 
 # ── Page Config ───────────────────────────────────────────────────────────────
 
@@ -28,10 +28,10 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
 html, body, [class*="css"] {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Outfit', sans-serif;
 }
 
 /* ── Hide Streamlit header & top white bar */
@@ -39,51 +39,82 @@ html, body, [class*="css"] {
     display: none !important;
 }
 
-/* ── App background */
+/* ── App background with a clean, light pastel gradient */
 .stApp {
-    background: linear-gradient(135deg, #0d1117 0%, #0f1923 50%, #0d1117 100%);
-    color: #e6edf3;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+    color: #0f172a;
     padding-top: 0px !important;
 }
 
-/* ── Sidebar */
+/* ── Glassmorphism Sidebar (Light) */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
-    border-right: 1px solid #30363d;
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(255, 255, 255, 0.4);
+}
+/* Ensure sidebar labels, titles, and reference text are highly visible */
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label {
+    color: #1e293b !important;
 }
 [data-testid="stSidebar"] .stMarkdown h1,
 [data-testid="stSidebar"] .stMarkdown h2,
-[data-testid="stSidebar"] .stMarkdown h3 {
-    color: #79c0ff;
+[data-testid="stSidebar"] .stMarkdown h3,
+[data-testid="stSidebar"] .stMarkdown h4,
+[data-testid="stSidebar"] .stMarkdown h5 {
+    color: #0f172a !important;
+    font-weight: 700;
 }
 
-/* ── Metric cards (Equal height & flexbox centered) */
+/* ── Metric Grid (Responsive CSS Flexbox grid) */
+.metrics-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    width: 100%;
+}
+
+/* ── Metric cards (Glassmorphic light with hover lift) */
 .metric-card {
-    background: linear-gradient(135deg, #161b22, #1c2533);
-    border: 1px solid #30363d;
-    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
     padding: 20px;
     text-align: center;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 145px;
-    width: 100%;
+    flex: 1 1 180px;
+    min-width: 140px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.metric-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.08);
+    background: rgba(255, 255, 255, 0.85);
+}
+
 .metric-title {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #8b949e;
+    color: #64748b;
     margin-bottom: 6px;
 }
 .metric-value {
     font-size: 2.2rem;
     font-weight: 700;
     line-height: 1;
+    color: #0f172a;
 }
 .metric-sub {
     font-size: 0.88rem;
@@ -91,27 +122,75 @@ html, body, [class*="css"] {
     font-weight: 500;
 }
 
+/* ── Comparison Card (Grounded Model Predictor) */
+.comparison-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 280px;
+    width: 100%;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.comparison-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.08);
+    background: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Plotly chart containers wrapper styling via Streamlit selector */
+div[data-testid="stPlotlyChart"] {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+    padding: 12px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+div[data-testid="stPlotlyChart"]:hover {
+    border-color: rgba(99, 102, 241, 0.25);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.06);
+    background: rgba(255, 255, 255, 0.6) !important;
+}
+
 /* ── Section headers */
 .section-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: #79c0ff;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #4f46e5;
     text-transform: uppercase;
-    margin-bottom: 4px;
-    border-bottom: 1px solid #21262d;
-    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding-bottom: 8px;
 }
 
 /* ── Info box */
 .info-box {
-    background: #161b22;
-    border-left: 3px solid #388bfd;
-    border-radius: 0 10px 10px 0;
-    padding: 16px 20px;
-    font-size: 0.87rem;
-    color: #c9d1d9;
+    background: rgba(255, 255, 255, 0.5);
+    border-left: 4px solid #4f46e5;
+    border-radius: 4px 16px 16px 4px;
+    padding: 18px 24px;
+    font-size: 0.92rem;
+    color: #334155;
     line-height: 1.7;
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    border-right: 1px solid rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    transition: border-color 0.3s ease;
+}
+.info-box:hover {
+    border-left-color: #6366f1;
 }
 
 /* ── Category badge */
@@ -124,31 +203,58 @@ html, body, [class*="css"] {
     letter-spacing: 0.05em;
 }
 
-/* ── Plotly chart containers */
-.chart-container {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 14px;
-    padding: 10px;
-}
-
 /* ── Sidebar slider labels */
-.stSlider label { color: #c9d1d9 !important; font-size: 0.9rem !important; }
-div[data-testid="stSlider"] .stMarkdown { color: #8b949e; }
+.stSlider label { color: #334155 !important; font-size: 0.9rem !important; }
+div[data-testid="stSlider"] .stMarkdown { color: #64748b; }
 
 /* ── Top title bar */
 .hero-title {
-    font-size: 2rem;
-    font-weight: 700;
-    background: linear-gradient(90deg, #79c0ff, #56d364);
+    font-size: 2.3rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #6366f1, #ec4899, #f43f5e);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    letter-spacing: -0.02em;
 }
 .hero-sub {
-    color: #8b949e;
-    font-size: 0.95rem;
-    margin-top: -6px;
+    color: #475569;
+    font-size: 1.05rem;
+    margin-top: -4px;
+}
+
+/* Style primary buttons (Active Tab navigation) */
+button[kind="primary"] {
+    background-color: #4f46e5 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    padding: 8px 16px !important;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.15) !important;
+    transition: all 0.3s ease !important;
+}
+button[kind="primary"]:hover {
+    background-color: #4338ca !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.25) !important;
+}
+
+/* Style secondary buttons (Inactive Tabs navigation) */
+button[kind="secondary"] {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    color: #475569 !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    border-radius: 12px !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+    transition: all 0.3s ease !important;
+}
+button[kind="secondary"]:hover {
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    color: #1e293b !important;
+    border-color: rgba(99, 102, 241, 0.25) !important;
+    transform: translateY(-2px) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -156,19 +262,19 @@ div[data-testid="stSlider"] .stMarkdown { color: #8b949e; }
 # ── AQI Helper Functions ──────────────────────────────────────────────────────
 
 AQI_SCALE = [
-    (50,  "Good",                  "#56d364", "#0d2c1a"),
-    (100, "Moderate",              "#e3b341", "#2c200a"),
-    (150, "Unhealthy for Sensitive","#f0883e", "#2c150a"),
-    (200, "Unhealthy",             "#f85149", "#2c0b0b"),
-    (300, "Very Unhealthy",        "#bc8cff", "#1a0d2c"),
-    (500, "Hazardous",             "#da3633", "#2c0505"),
+    (50,  "Good",                  "#059669", "#e6fbf3"),
+    (100, "Moderate",              "#d97706", "#fef3c7"),
+    (150, "Unhealthy for Sensitive","#ea580c", "#ffedd5"),
+    (200, "Unhealthy",             "#dc2626", "#fee2e2"),
+    (300, "Very Unhealthy",        "#9333ea", "#f3e8ff"),
+    (500, "Hazardous",             "#be123c", "#ffe4e6"),
 ]
 
 def classify_aqi(val):
     for ceiling, label, color, bg in AQI_SCALE:
         if val <= ceiling:
             return label, color, bg
-    return "Hazardous", "#da3633", "#2c0505"
+    return "Hazardous", "#be123c", "#ffe4e6"
 
 # ── Load Model ────────────────────────────────────────────────────────────────
 
@@ -189,23 +295,9 @@ FEATURE_LABELS = ["CO", "Ozone", "NO₂", "PM 2.5"]
 
 with st.sidebar:
     st.markdown("## :material/eco: AQI Platform")
-    st.markdown("**AI-Driven Analytics**")
+    st.markdown("**Air Quality Insights**")
     st.markdown("---")
     
-    st.markdown("### :material/public: Location Settings")
-    st.caption("Type any city name around the world to fetch live AQI.")
-    city_query = st.text_input("Enter city name", "Hyderabad").strip()
-
-    st.markdown("---")
-    st.markdown("### :material/person: Who's asking?")
-    user_profile = st.selectbox(
-        "Personalize advisories for:",
-        ["General public", "Asthma / respiratory condition", "Parent of young children",
-         "Elderly", "Outdoor athlete / runner"],
-        index=0,
-    )
-
-    st.markdown("---")
     st.markdown("##### :material/legend_toggle: AQI Scale Reference")
     for ceil, lbl, col, _ in AQI_SCALE:
         st.markdown(
@@ -213,24 +305,57 @@ with st.sidebar:
             f'<span style="color:#8b949e;font-size:0.8rem;">(≤{ceil})</span>',
             unsafe_allow_html=True,
         )
-    st.markdown("---")
-    st.caption("Model: Random Forest Regressor")
 
-# ── Fetch Live City Data ──────────────────────────────────────────────────────
-live = fetch_live_aqi(city_query)
+
+
+# Define default user profile
+user_profile = "General public"
 
 # ── Header ────────────────────────────────────────────────────────────────────
 
 st.markdown('<div class="hero-title">AQI Decision Intelligence Platform</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-sub">Real-time air quality tracking, forecast analysis, and model-driven AI decision advisories</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-sub">Real-time air quality tracking, forecast analysis, and AI health recommendations</div>', unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
-tab_live, tab_forecast, tab_ai = st.tabs([
-    ":material/public: Live City AQI", ":material/calendar_today: Forecast", ":material/smart_toy: Ask AI"
-])
+# ── Search Bar on Main Page ──
+col_search, col_spacer = st.columns([2, 3])
+with col_search:
+    city_query = st.text_input(
+        "Search City", 
+        value="Hyderabad", 
+        placeholder="Type any city (e.g. New York, London, Tokyo)...",
+        label_visibility="collapsed",
+        help="Type a city and press Enter to search air quality details."
+    ).strip()
 
-# ── Tab: Live City AQI ──────────────────────────────────────────────────────
-with tab_live:
+
+
+# ── Fetch Live City Data ──────────────────────────────────────────────────────
+live = fetch_live_aqi(city_query)
+
+# Initialize active tab in session state
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "Live City AQI"
+
+# Custom segmented tab navigation bar
+nav_cols = st.columns([1, 1, 1])
+with nav_cols[0]:
+    if st.button("Live City AQI", icon=":material/public:", type="primary" if st.session_state.active_tab == "Live City AQI" else "secondary", use_container_width=True):
+        st.session_state.active_tab = "Live City AQI"
+        st.rerun()
+with nav_cols[1]:
+    if st.button("Forecast", icon=":material/calendar_today:", type="primary" if st.session_state.active_tab == "Forecast" else "secondary", use_container_width=True):
+        st.session_state.active_tab = "Forecast"
+        st.rerun()
+with nav_cols[2]:
+    if st.button("Ask AI", icon=":material/smart_toy:", type="primary" if st.session_state.active_tab == "Ask AI" else "secondary", use_container_width=True):
+        st.session_state.active_tab = "Ask AI"
+        st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Tab Content rendering based on active tab ─────────────────────────────────
+if st.session_state.active_tab == "Live City AQI":
     st.markdown('<div class="section-header">Real-Time City AQI</div>', unsafe_allow_html=True)
     st.caption("Live data ingested from the AQICN global monitoring network — this is what makes the platform a real decision tool, not just a demo.")
 
@@ -252,87 +377,80 @@ with tab_live:
         predicted_aqi = float(model.predict(live_input)[0])
         pred_label, pred_color, pred_bg = classify_aqi(predicted_aqi)
 
-        # ── Metric Row ──
-        lc1, lc2, lc3, lc4, lc5 = st.columns(5)
-        with lc1:
-            st.markdown(f"""<div class="metric-card" style="border-color:{live_color}33;background:linear-gradient(135deg,{live_bg},{live_bg}aa);">
+        # ── Metric Grid ──
+        st.markdown(f"""
+        <div class="metrics-grid">
+            <div class="metric-card" style="border-color:{live_color}44; background: linear-gradient(135deg, {live_bg}, {live_bg}aa);">
                 <div class="metric-title">{live['city']}</div>
                 <div class="metric-value" style="color:{live_color};">{live['aqi']}</div>
-                <div class="metric-sub" style="color:{live_color};font-size:0.8rem;margin-top:2px;">{live_label}</div></div>""", unsafe_allow_html=True)
-        for col, label, val in [(lc2, "CO", live["co"]), (lc3, "Ozone", live["ozone"]),
-                                 (lc4, "NO₂", live["no2"]), (lc5, "PM 2.5", live["pm25"])]:
-            with col:
-                st.markdown(f"""<div class="metric-card">
-                    <div class="metric-title">{label}</div>
-                    <div class="metric-value" style="font-size:1.8rem;color:#c9d1d9;">{val:.1f}</div></div>""", unsafe_allow_html=True)
+                <div class="metric-sub" style="color:{live_color};">{live_label}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">CO</div>
+                <div class="metric-value">{live["co"]:.1f}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Ozone</div>
+                <div class="metric-value">{live["ozone"]:.1f}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">NO₂</div>
+                <div class="metric-value">{live["no2"]:.1f}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">PM 2.5</div>
+                <div class="metric-value">{live["pm25"]:.1f}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.caption(f"Dominant pollutant: **{live['dominant_pollutant']}** · Last updated: {live['time']}")
 
-        # ── Gauge and Model Comparison Row ──
+        # ── Visual Analytics Row ──
         left, right = st.columns([1, 1], gap="medium")
         
         with left:
-            st.markdown('<div class="section-header">AQI Gauge (Actual Live)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">Air Quality Gauge</div>', unsafe_allow_html=True)
             gauge_steps = [
-                {"range": [0,   50],  "color": "#0d2c1a"},
-                {"range": [50,  100], "color": "#2c200a"},
-                {"range": [100, 150], "color": "#2c150a"},
-                {"range": [150, 200], "color": "#2c0b0b"},
-                {"range": [200, 300], "color": "#1a0d2c"},
-                {"range": [300, 500], "color": "#2c0505"},
+                {"range": [0,   50],  "color": "#e6fbf3"},
+                {"range": [50,  100], "color": "#fef3c7"},
+                {"range": [100, 150], "color": "#ffedd5"},
+                {"range": [150, 200], "color": "#fee2e2"},
+                {"range": [200, 300], "color": "#f3e8ff"},
+                {"range": [300, 500], "color": "#ffe4e6"},
             ]
             fig_gauge = go.Figure(go.Indicator(
-                mode="gauge+number+delta",
+                mode="gauge+number",
                 value=live["aqi"],
                 domain={"x": [0, 1], "y": [0, 1]},
                 title={"text": f"<b>{live_label}</b>", "font": {"size": 18, "color": live_color}},
-                number={"font": {"size": 52, "color": live_color}, "suffix": ""},
+                number={"font": {"size": 52, "color": live_color}},
                 gauge={
                     "axis": {
                         "range": [0, 500],
                         "tickwidth": 1,
-                        "tickcolor": "#30363d",
-                        "tickfont": {"color": "#8b949e", "size": 11},
+                        "tickcolor": "#94a3b8",
+                        "tickfont": {"color": "#475569", "size": 11},
                     },
                     "bar": {"color": live_color, "thickness": 0.25},
-                    "bgcolor": "#0d1117",
+                    "bgcolor": "rgba(0,0,0,0)",
                     "borderwidth": 0,
                     "steps": gauge_steps,
-                    "threshold": {
-                        "line": {"color": "#ffffff", "width": 2},
-                        "thickness": 0.75,
-                        "value": live["aqi"],
-                    },
                 },
             ))
             fig_gauge.update_layout(
-                paper_bgcolor="#161b22",
-                font={"family": "Space Grotesk"},
+                paper_bgcolor="rgba(0,0,0,0)",
+                font={"family": "Outfit"},
                 height=280,
                 margin=dict(t=40, b=10, l=20, r=20),
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
         with right:
-            st.markdown('<div class="section-header">ML Predictor Comparison</div>', unsafe_allow_html=True)
-            st.markdown(f"""
-            <div class="metric-card" style="border-color:{pred_color}33;background:linear-gradient(135deg,{pred_bg},{pred_bg}aa);height:280px;width:100%;">
-                <div class="metric-title" style="font-size:0.9rem;">Random Forest Prediction</div>
-                <div class="metric-value" style="color:{pred_color};font-size:4rem;margin-top:10px;">{predicted_aqi:.1f}</div>
-                <div class="metric-sub" style="color:{pred_color};font-size:1.1rem;font-weight:600;margin-top:10px;">{pred_label}</div>
-                <div style="font-size:0.8rem;color:#8b949e;margin-top:20px;">
-                    Model inputs: Live readings for CO, Ozone, NO₂, PM 2.5
-                </div>
-            </div>""", unsafe_allow_html=True)
-
-        # ── Contribution and Feature Importance Row ──
-        c_left, c_right = st.columns([1, 1], gap="medium")
-        
-        with c_left:
-            st.markdown('<div class="section-header">Live Pollutant Contribution</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">Pollutants Breakdown</div>', unsafe_allow_html=True)
             raw_vals   = [live["co"], live["ozone"], live["no2"], live["pm25"]]
             fig_inputs = go.Figure()
-            colors_map = ["#388bfd", "#56d364", "#e3b341", "#f85149"]
+            colors_map = ["#a5b4fc", "#86efac", "#fdba74", "#fca5a5"]
 
             for i, (label, val, color) in enumerate(zip(FEATURE_LABELS, raw_vals, colors_map)):
                 fig_inputs.add_trace(go.Bar(
@@ -342,62 +460,25 @@ with tab_live:
                     marker_color=color,
                     text=f"{val:.1f}",
                     textposition="outside",
-                    textfont={"color": "#c9d1d9"},
+                    textfont={"color": "#334155"},
                 ))
 
             fig_inputs.update_layout(
-                paper_bgcolor="#161b22",
-                plot_bgcolor="#161b22",
-                font={"family": "Space Grotesk", "color": "#c9d1d9"},
-                height=260,
-                margin=dict(t=20, b=20, l=10, r=10),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font={"family": "Outfit", "color": "#334155"},
+                height=280,
+                margin=dict(t=30, b=20, l=10, r=10),
                 showlegend=False,
-                xaxis=dict(showgrid=False, tickfont={"size": 13}),
+                xaxis=dict(showgrid=False, tickfont={"size": 13, "color": "#475569"}),
                 yaxis=dict(
-                    showgrid=True, gridcolor="#21262d",
-                    title={"text": "AQI Sub-Index Value", "font": {"color": "#8b949e"}},
-                    tickfont={"color": "#8b949e"},
+                    showgrid=True, gridcolor="rgba(0,0,0,0.06)",
+                    title={"text": "Sub-Index Value", "font": {"color": "#475569"}},
+                    tickfont={"color": "#475569"},
                 ),
                 bargap=0.35,
             )
             st.plotly_chart(fig_inputs, use_container_width=True)
-
-        with c_right:
-            st.markdown('<div class="section-header">Model Feature Importance</div>', unsafe_allow_html=True)
-            importances = model.feature_importances_
-            fi_df = pd.DataFrame({
-                "Pollutant":   FEATURE_LABELS,
-                "Importance":  importances,
-                "Feature":     FEATURES,
-            }).sort_values("Importance", ascending=True)
-
-            bar_colors = ["#388bfd", "#56d364", "#e3b341", "#f85149"]
-            fig_bar = go.Figure(go.Bar(
-                x=fi_df["Importance"],
-                y=fi_df["Pollutant"],
-                orientation="h",
-                marker=dict(
-                    color=bar_colors,
-                    line=dict(width=0),
-                ),
-                text=[f"{v:.3f}" for v in fi_df["Importance"]],
-                textposition="outside",
-                textfont={"color": "#c9d1d9", "size": 12},
-            ))
-            fig_bar.update_layout(
-                paper_bgcolor="#161b22",
-                plot_bgcolor="#161b22",
-                font={"family": "Space Grotesk", "color": "#c9d1d9"},
-                height=260,
-                margin=dict(t=20, b=20, l=10, r=60),
-                xaxis=dict(
-                    showgrid=True, gridcolor="#21262d",
-                    title={"text": "Relative Importance", "font": {"color": "#8b949e"}},
-                    tickfont={"color": "#8b949e"},
-                ),
-                yaxis=dict(showgrid=False, tickfont={"size": 13}),
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
 
         # ── AI Advisory Card ──
         st.markdown('<div class="section-header">AI Advisory — Live Conditions</div>', unsafe_allow_html=True)
@@ -409,7 +490,7 @@ with tab_live:
         st.markdown(f'<div class="info-box">{live_advisory}</div>', unsafe_allow_html=True)
 
 # ── Tab: Forecast ─────────────────────────────────────────────────────────
-with tab_forecast:
+elif st.session_state.active_tab == "Forecast":
     st.markdown('<div class="section-header">Multi-Day AQI Forecast</div>', unsafe_allow_html=True)
     st.caption("Forecast derived from the same live feed's projection data — shows what's coming, not just what is now.")
 
@@ -429,14 +510,14 @@ with tab_forecast:
             fig_fc.add_trace(go.Scatter(
                 x=pivot["date"], y=pivot["overall_aqi_est"],
                 mode="lines+markers", name="Estimated overall AQI",
-                line=dict(color="#79c0ff", width=3), marker=dict(size=8),
+                line=dict(color="#818cf8", width=3), marker=dict(size=8, color="#6366f1"),
             ))
             fig_fc.update_layout(
-                paper_bgcolor="#161b22", plot_bgcolor="#161b22",
-                font={"family": "Space Grotesk", "color": "#c9d1d9"},
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font={"family": "Outfit", "color": "#334155"},
                 height=340, margin=dict(t=20, b=20, l=10, r=10),
-                xaxis=dict(showgrid=False, tickfont={"color": "#8b949e"}),
-                yaxis=dict(showgrid=True, gridcolor="#21262d", title="Estimated AQI", tickfont={"color": "#8b949e"}),
+                xaxis=dict(showgrid=False, tickfont={"color": "#475569"}),
+                yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)", title="Estimated AQI", tickfont={"color": "#475569"}),
             )
             st.plotly_chart(fig_fc, use_container_width=True)
             st.dataframe(pivot, use_container_width=True, hide_index=True)
@@ -453,41 +534,78 @@ with tab_forecast:
             st.markdown(f'<div class="info-box">{fc_advisory}</div>', unsafe_allow_html=True)
 
 # ── Tab: Ask AI ────────────────────────────────────────────────────────────
-with tab_ai:
+elif st.session_state.active_tab == "Ask AI":
     st.markdown('<div class="section-header">Ask the AQI Assistant</div>', unsafe_allow_html=True)
-    st.caption("Ask a natural-language question grounded in the selected city's live air quality metrics.")
 
-    question = st.text_area(
-        "Your question",
-        placeholder="e.g. Is it safe to let my kids play outside this evening?",
-        height=90,
-    )
+    if live and not live.get("error"):
+        q_city = live["city"]
+        st.caption(f"Grounding conversation in live metrics for **{q_city}**")
 
-    if st.button("Ask", type="primary"):
-        if not question.strip():
-            st.warning("Type a question first.")
-        else:
-            if live and not live.get("error"):
-                q_aqi = live["aqi"]
-                q_label = classify_aqi(live["aqi"])[0]
-                q_co, q_ozone, q_no2, q_pm25 = live["co"], live["ozone"], live["no2"], live["pm25"]
-                q_city = live["city"]
-                
-                with st.spinner("Thinking…"):
-                    answer = answer_question(
-                        question, q_aqi, q_label, q_co, q_ozone, q_no2, q_pm25,
-                        city=q_city, user_profile=user_profile,
+        # Initialize chat history
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = []
+
+        # Auto-reset chat history if city changes
+        current_context_key = f"{q_city}"
+        if "last_context_key" not in st.session_state:
+            st.session_state.last_context_key = current_context_key
+
+        if st.session_state.last_context_key != current_context_key:
+            st.session_state.chat_history = []
+            st.session_state.last_context_key = current_context_key
+
+        # Clear history button
+        col_title, col_clear = st.columns([5, 1])
+        with col_clear:
+            if st.button("Clear Chat", key="clear_chat", type="secondary", use_container_width=True):
+                st.session_state.chat_history = []
+                st.rerun()
+
+        # Display chat messages from history on app rerun
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # React to user input
+        if prompt := st.chat_input("Ask a question about the air quality...", key="chat_user_input"):
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            # Add user message to chat history
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+
+            # Generate assistant response
+            q_aqi = live["aqi"]
+            q_label = classify_aqi(live["aqi"])[0]
+            q_co, q_ozone, q_no2, q_pm25 = live["co"], live["ozone"], live["no2"], live["pm25"]
+
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    # Extract the forecast summary if available
+                    fdf = extract_forecast(live["raw"])
+                    forecast_summary = None
+                    if not fdf.empty:
+                        pivot = daily_overall_forecast(fdf)
+                        direction = trend_direction(pivot)
+                        forecast_summary = f"{direction} trend, moving from {pivot['overall_aqi_est'].iloc[0]:.0f} to {pivot['overall_aqi_est'].iloc[-1]:.0f} over the forecast window."
+
+                    response = answer_question(
+                        prompt, q_aqi, q_label, q_co, q_ozone, q_no2, q_pm25,
+                        city=q_city, forecast_summary=forecast_summary, user_profile=user_profile,
+                        chat_history=st.session_state.chat_history[:-1] # pass history excluding latest prompt
                     )
-                st.markdown(f'<div class="info-box">{answer}</div>', unsafe_allow_html=True)
-            else:
-                st.error("No valid live city data loaded to ground the AI assistant.")
+                    st.markdown(response)
+            # Add assistant response to chat history
+            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            st.rerun()
+    else:
+        st.error("No valid live city data loaded to ground the AI assistant.")
 
-    st.caption("Needs a Gemini API key (`GEMINI_API_KEY`) to use the real model — without one, you'll get a rule-based fallback answer so the app still works.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div style="text-align:center;color:#484f58;font-size:0.78rem;margin-top:20px;">'
-    'AI-Driven AQI Analytics Platform &nbsp;|&nbsp; Built with Streamlit + Plotly + Scikit-Learn'
+    '<div style="text-align:center;color:#64748b;font-size:0.78rem;margin-top:20px;">'
+    'AQI Decision Intelligence Platform &nbsp;|&nbsp; Real-time Air Quality Insights'
     '</div>',
     unsafe_allow_html=True,
 )
