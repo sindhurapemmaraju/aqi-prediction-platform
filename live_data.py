@@ -20,8 +20,14 @@ def _get_token():
     token = os.environ.get("AQICN_TOKEN")
     if not token:
         try:
-            token = st.secrets.get("AQICN_TOKEN", None)
+            if "AQICN_TOKEN" in st.secrets:
+                token = st.secrets["AQICN_TOKEN"]
         except Exception:
+            token = None
+            
+    if token:
+        token = str(token).strip()
+        if token.lower() in ["none", "null", "false", ""]:
             token = None
     return token
 
