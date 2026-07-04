@@ -365,16 +365,11 @@ if st.session_state.active_tab == "Live City AQI":
     st.caption("Live data ingested from the AQICN global monitoring network — this is what makes the platform a real decision tool, not just a demo.")
 
     if live is None or live.get("error") == "no_token":
-        try:
-            loaded_keys = list(st.secrets.keys())
-        except Exception as e:
-            loaded_keys = f"Error reading secrets: {e}"
         st.warning(
             "No AQICN API token configured. Live city lookup needs a free token from "
             "[aqicn.org/data-platform/token](https://aqicn.org/data-platform/token/), "
             "set as the `AQICN_TOKEN` environment variable or in `st.secrets`."
         )
-        st.error(f"🔧 **Streamlit Cloud Secrets Debug**: Loaded keys: `{loaded_keys}`")
     elif live.get("error"):
         st.error(f"Couldn't fetch data for '{city_query}': {live['error']}")
     else:
