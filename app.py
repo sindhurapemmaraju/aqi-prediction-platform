@@ -281,8 +281,13 @@ def classify_aqi(val):
 @st.cache_resource(show_spinner="Loading model…")
 def load_artifacts():
     if not os.path.exists("aqi_model.pkl"):
-        st.error("⚠️ `aqi_model.pkl` not found. Run `python train_model.py` first.")
-        st.stop()
+        # Auto-train if files are missing (essential for direct Cloud deployments)
+        try:
+            import subprocess
+            subprocess.run(["python", "train_model.py"], check=True)
+        except Exception as e:
+            st.error(f"⚠️ Model files missing and auto-training failed: {e}")
+            st.stop()
     model  = joblib.load("aqi_model.pkl")
     scaler = joblib.load("scaler.pkl") if os.path.exists("scaler.pkl") else None
     return model, scaler

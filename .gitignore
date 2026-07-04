@@ -1,7 +1,6 @@
 venv/
 .venv/
 __pycache__/
-*.pkl
 aqi_data.csv
 .DS_Store
 .streamlit/secrets.toml
